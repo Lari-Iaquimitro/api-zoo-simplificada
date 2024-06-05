@@ -1,140 +1,86 @@
 import express from 'express';
 import cors from 'cors';
-import { Ave } from './model/Ave';
-import { Habitat } from './model/Habitat';
-import { Atracao } from './model/Atracao';
 import { DatabaseModel } from './model/DatabaseModel';
 import AveController from './controller/AveController';
 import HabitatController from './controller/HabitatController';
+import AtracaoController from './controller/AtracaoController';
 
+// Instanciando um novo objeto do controller AveController
+// assim podemos acessar os métodos do controller
+const aveController = new AveController('', 0, '', 0);
+
+// Instanciando um novo objeto do controller HabitatController
+// assim podemos acessar os métodos do controller
+const habitatController = new HabitatController('');
+
+// Instanciando um novo objeto do controller AtracaoController
+// assim podemos acessar os métodos do controller
+const atracaoController = new AtracaoController('');
+
+// Criando um web server usando o express
 const server = express();
+// Definindo a porta que a aplicação irá rodar
 const port = 3000;
 
+// Configurando o serivdor para usar JSON
 server.use(express.json());
+// Configurando o servidor para usar CORS
 server.use(cors());
 
-const aveController = new AveController('', 0,'',0);
-const habitatController = new HabitatController('');
 // Rota padrão para testes (NÃO USAR EM AMBIENTE PRODUÇÃO)
 server.get('/', (req, res) => {
     res.send('Hello World!');
-});
-
-server.post('/login', (req, res) => {
-    const { username, password } = req.body;
-    console.log(`Informações: ${username} - ${password}`);
 });
 
 /**
  * Listar informações cadastradas no banco de dados
  */
 // Listar todos as aves cadastradas
-server.get('/listar-aves', aveController.todos);
-
+server.get('/aves', aveController.todos);
 // Listar todos os habitats cadastradas
 server.get('/habitats', habitatController.todos);
-
 // Listar todas as atrações cadastradas
-server.get('/atracoes', async (req, res) => {
-    // cria objeto atracoes e atribui a ele o retorno do método listarAtracoes
-    const atracoes = await Atracao.listarAtracoes();
-
-    // retorna a lista de atracoes em formato json
-    res.status(200).json(atracoes);
-});
+server.get('/atracoes', atracaoController.todos);
 
 /**
  * Cadastrar informações no sistema
  */
 // Cadastra informações de uma nova ave
 server.post('/novo/ave', aveController.novo);
-
 // Cadastra informações de um novo habitat
 server.post('/novo/habitat', habitatController.novo);
-
 // Cadastra informações de uma nova atracao
-server.post('/novo/atracao', async (req, res) => {
-    // Desestruturando objeto recebido pelo front-end
-    const { nomeAtracao, idHabitat } = req.body;
+server.post('/novo/atracao', atracaoController.novo);
 
-    // Instanciando objeto Ave
-    const novaAtracao = new Atracao(nomeAtracao);
-
-    let result = false;
-
-    // verifica se o idHabitat não veio vazio do front-end
-    if (idHabitat != undefined) {
-        // Chama o método para persistir a atracao no banco de dados associando ao id
-        result = await Atracao.cadastrarAtracao(novaAtracao, idHabitat);
-    } else {
-        // Chama o método para persistir a atracao no banco de dados
-        result = await Atracao.cadastrarAtracao(novaAtracao);
-    }
-
-    // verifica se a query foi executada com sucesso
-    if (result) {
-        return res.status(200).json('Atração cadastrado com sucesso');
-    } else {
-        return res.status(400).json('Não foi possível cadastrar a atração no banco de dados');
-    }
-});
-
+/**
+ * Remover informações no sistema
+ */
 // Rota para remover um animal
 server.delete('/remover/animal', aveController.remover);
+// Rota para remover um habitat
+server.delete('/remover/habitat', habitatController.atualizar);
+// Rota para remover uma atração
+server.delete('/remover/atracao', atracaoController.remover);
 
+/**
+ * Atualizar informações no sistema
+ */
 // Rota para atualizar as informações de um animal
 server.put('/atualizar/animal', aveController.atualizar);
-
-// Rota para remover uma atração
-server.delete('/remover/atracao', async (req, res) => {
-    // recuperando o id da atração a ser removida
-    const idAtracao = parseInt(req.query.idAtracao as string);
-
-    // chama a função para remover a atração e armazena o resultado na variável
-    const resultado = await Atracao.removerAtracao(idAtracao);
-
-    if(resultado) {
-        // se o resultado for **true**, retorna mensagem de sucesso
-        return res.status(200).json('Atração foi removida com sucesso');
-    } else {
-        // se o resultado for **false**, retorna mensagem de erro
-        return res.status(401).json('Erro ao remover atração');
-    }
-})
-
-// Rota para atualizar as informações de uma atração
-server.put('/atualizar/atracao', async (req, res) => {
-    // Desestruturando objeto recebido pelo front-end
-    const { nomeAtracao } = req.body;
-    // recuperando o id da atração a ser atualizada
-    const idAtracao = parseInt(req.query.idAtracao as string);
-
-    // Instanciando objeto Atração
-    const novaAtracao = new Atracao(nomeAtracao);
-
-    // Chama o método para persistir a ave no banco de dados e armazena o resultado na variável
-    const resultado = await Atracao.atualizarAtracao(novaAtracao, idAtracao);
-
-    if(resultado) {
-        // se o resultado for **true**, retorna mensagem de sucesso
-        return res.status(200).json('Atração foi alterada com sucesso');
-    } else {
-        // se o resultado for **false**, retorna mensagem de erro
-        return res.status(401).json('Erro ao alterar atração');
-    }
-})
-
-// Rota para remover um habitat
-server.delete('/remover/habitat', habitatController.remover);
-
 // Rota para atualizar as informações de um habitat
-server.put('/atualizar/habitat', habitatController.atualizar)
+server.put('/atualizar/habitat', habitatController.atualizar);
+// Rota para atualizar as informações de uma atração
+server.put('/atualizar/atracao', atracaoController.atualizar);
 
+// Verifica se é possível realizar uma conexão com o banco de dados
 new DatabaseModel().testeConexao().then((resbd) => {
+    // Verifica se o resultado da função de teste for verdadeiro (TRUE)
     if(resbd) {
+        // Caso seja verdadeiro o servidor é iniciado
         server.listen(port, () => {
             console.info(`Servidor executando no endereço http://localhost:${port}/`);
         })
+    // Caso seja falso (FALSE) é lançado um log de erro
     } else {
         console.log(`Não foi possível conectar ao banco de dados`);
     }
